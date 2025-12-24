@@ -39,6 +39,7 @@
 
 int clear_buffer(void);
 int confirm_dialogue(void);
+int user_input(void);
 
 int main(void) {
   printf("Wondermail-S Generator\n");
@@ -47,42 +48,95 @@ int main(void) {
   printf("Mission Types:\n");
   DISPLAY_ARRAY(mission_types, MISSION_TYPE_COUNT, name);
   printf("Select a Mission Type:\n> ");
-  int mission_type = getchar();
-  clear_buffer();
+
+  int mission_type = user_input() - 1;
+  printf("%s\n", mission_types[mission_type].name);
 
   printf("Dungeons:\n");
   DISPLAY_ARRAY(dungeons, DUNGEON_COUNT, name);
   printf("Select a Dungeon:\n> ");
-  int dungeon = getchar();
-  clear_buffer();
+  int dungeon = user_input() - 1;
 
-  printf("Floor:\n> ");
-  int floor = getchar();
-  clear_buffer();
+  int floor;
+  if (mission_types[mission_type].special_floor) {
+    floor = mission_types[mission_type].special_floor;
+  } else {
+    printf("Floor:\n> ");
+    floor = user_input() - 1;
+  }
+  int client;
+  int client_gender;
 
-  printf("Client:\n");
-  DISPLAY_ARRAY(pokemon_list, POKEMON_COUNT, name);
-  printf("Select a Client:\n> ");
-  int client = getchar();
-  clear_buffer();
+  if (mission_types[mission_type].force_client) {
+    client = mission_types[mission_type].force_client;
+  } else {
+    printf("Client:\n");
+    DISPLAY_ARRAY(pokemon_list, POKEMON_COUNT, name);
+    printf("Select a Client:\n> ");
+    client = user_input() - 1;
 
-  printf("Female?\n(Y/n)> ");
-  int client_gender = confirm_dialogue(); // Male
+    printf("Female?(Y/n)\n> ");
+    client_gender = confirm_dialogue(); // Male
+  }
+
+  int target;
+  int target_gender;
 
   // If Statements or switches need to be used to toggle Target
-  printf("Select a Target:\n> ");
-  int target = getchar();
-  clear_buffer();
+  if (mission_types[mission_type].client_is_target) {
+    target = client;
+    target_gender = client_gender;
+  } else if (mission_types[mission_type].force_target) {
+    target = mission_types[mission_type].force_target;
+  } else {
+    printf("Select a Target:\n> ");
+    target = user_input() - 1;
+    printf("Female?(Y/n)\n> ");
+    target_gender = confirm_dialogue();
+  }
 
-  printf("Female?\n(Y/n)> ");
-  int target_gender = confirm_dialogue(); // Male
+  // If statements or switches needed for target items
+  if (mission_types[mission_type].use_target_item) {
+    printf("Target Item:\n");
+    DISPLAY_ARRAY(items, ITEM_COUNT, name);
+    printf("Select an Item:\n> ");
+    int target_item = user_input() - 1;
+  }
 
-  // If statements or switches needed for target Item
-  printf("Target Item:\n");
-  DISPLAY_ARRAY(items, ITEM_COUNT, name);
-  int target_item = getchar();
+  // Only if Reward item is there
+  if (!mission_types[mission_type].no_reward) {
+    printf("Reward Type:\n");
+    DISPLAY_ARRAY(reward_types, REWARD_TYPE_COUNT, name);
+
+    printf("Select a Reward Type:\n> ");
+    int reward_type = user_input() - 1;
+
+    printf("Select a Reward Item:\n> ");
+    int reward_item = user_input() - 1;
+  }
+
+  printf("Euro Version?\n> ");
+  int euro_version_check = confirm_dialogue();
+
+  // generator here with all values
 
   return 0;
+}
+
+int user_input(void) {
+
+  int input;
+
+  while (1) {
+    if (scanf("%d", &input) != 1) {
+      printf("Invalid input, Try Again\n> ");
+      clear_buffer();
+    } else {
+      break;
+    }
+  }
+  clear_buffer();
+  return input;
 }
 
 int toUpper(char input_char) {
