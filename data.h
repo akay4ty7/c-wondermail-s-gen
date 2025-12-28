@@ -12,11 +12,11 @@ struct MissionType {
   int main_type;
   int special_type;
   const char *name;
-  int special_floor;
+  int use_target_item;
+  int client_is_target;
   int force_client;
   int force_target;
-  int client_is_target;
-  int use_target_item;
+  int special_floor;
   int no_reward;
 };
 
