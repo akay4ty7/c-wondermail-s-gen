@@ -6,6 +6,10 @@
 #include "data.h"
 #include "wms_gen.h"
 
+#define FINAL_CODE_L 50
+#define CHAR_S_US_L 35
+#define BITS_L 200
+
 // generic display
 #define DISPLAY_ARRAY(arr, count, member)                                      \
   do {                                                                         \
@@ -31,11 +35,11 @@ int confirm_dialogue(void);
 int user_input(void);
 int to_upper(char input_char);
 int process_custom_mission(void);
-int random_mission(void);
+int random_mission(int version);
 int random_range_result(int min, int max);
 
 int main(void) {
-  printf("Wondermail-S Generator\n1.\tCustom Mission?\n2.\tRandom "
+  printf("Wondermail-S Generator\n1.\tCustom Mission\n2.\tRandom "
          "Mission\n0.\tExit\n");
   while (1) {
     int input = user_input();
@@ -50,9 +54,13 @@ int main(void) {
     } else if (input == 2) {
       printf("Generation number\n> ");
       int amount = user_input();
+
+      printf("Euro Version?(Y/n)\n> ");
+      int version_check = confirm_dialogue();
+
       for (int i = 0; i < amount; i++) {
         printf("WONDERMAIL S PASSWORD %d\n", i + 1);
-        random_mission();
+        random_mission(version_check);
       }
 
       break;
@@ -68,7 +76,7 @@ int main(void) {
   return 0;
 }
 
-int random_mission(void) {
+int random_mission(int version_check) {
   struct WonderMailData wondermail_data = {0};
   // Defaults
   wondermail_data.mail_type = 4;
@@ -94,6 +102,11 @@ int random_mission(void) {
     wondermail_data.floor =
         random_range_result(1, dungeons[dungeon_index].max_floors);
     wondermail_data.special_floor = mission_types[mission_index].special_floor;
+  } else if (wondermail_data.mission_type == 12) {
+    wondermail_data.floor =
+        random_range_result(1, dungeons[dungeon_index].max_floors);
+    wondermail_data.special_floor =
+        random_range_result(TREASURE_HUNT_FLOOR_MIN, TREASURE_HUNT_FLOOR_MAX);
   } else {
     wondermail_data.floor =
         random_range_result(1, dungeons[dungeon_index].max_floors);
@@ -150,20 +163,20 @@ int random_mission(void) {
     wondermail_data.reward = 109;
   }
 
-  int euro_version_check = 1;
+  int euro_version_check = version_check;
 
   init_crc32_table();
 
   // ===== STAGE 1: 136-bit bitstream =====
-  char bits[200];
+  char bits[BITS_L];
   wonder_to_bits(&wondermail_data, bits);
 
   // ===== STAGE 2: Encrypted 170-bit bitstream =====
-  char encrypted[200];
+  char encrypted[BITS_L];
   encryption_bitstream(bits, encrypted);
 
   // ===== STAGE 3: Unscrambled characters =====
-  char unscrambled[35];
+  char unscrambled[CHAR_S_US_L];
   bits_to_chars(encrypted, unscrambled);
 
   const uint8_t *swap_table;
@@ -173,13 +186,14 @@ int random_mission(void) {
   } else {
     swap_table = byte_swap_us;
   }
-  char scrambled[35];
+  char scrambled[CHAR_S_US_L];
   scramble_string(unscrambled, scrambled, swap_table);
 
-  char final_code[50];
+  char final_code[FINAL_CODE_L];
   prettify(scrambled, final_code);
 
-  printf("Dungeon Name: %s\nDungeon Floor: %d\nMax Dungeon Floor: %d\n%s\n\n",
+  printf("Dungeon Name: %s\nDungeon Floor: %d\nMax Dungeon Floor: "
+         "%d\nWONDERMAIL S PASSWORD\n%s\n\n",
          dungeons[dungeon_index].name, wondermail_data.floor,
          dungeons[dungeon_index].max_floors, final_code);
 
@@ -219,6 +233,10 @@ int process_custom_mission(void) {
       wondermail_data.floor = user_input();
       wondermail_data.special_floor =
           mission_types[mission_index].special_floor;
+    } else if (wondermail_data.mission_type == 12) {
+      wondermail_data.floor = user_input();
+      wondermail_data.special_floor =
+          random_range_result(TREASURE_HUNT_FLOOR_MIN, TREASURE_HUNT_FLOOR_MAX);
     } else {
       wondermail_data.floor = user_input();
     }
@@ -294,29 +312,21 @@ int process_custom_mission(void) {
     wondermail_data.reward = 109;
   }
 
-  printf("Euro Version?\n> ");
+  printf("Euro Version?(Y/n)\n> ");
   int euro_version_check = confirm_dialogue();
-
-  printf("\nUser Selection\nMission Type: %d\nDungeon: %d\nFloor: %d\nClient: "
-         "%d\nTarget: %d\nReward Type: %d\nReward: %d\nFlavor Text: "
-         "%d\nMission Special: %d\n",
-         wondermail_data.mission_type, wondermail_data.dungeon,
-         wondermail_data.floor, wondermail_data.client, wondermail_data.target,
-         wondermail_data.reward_type, wondermail_data.reward,
-         wondermail_data.flavor_text, wondermail_data.mission_special);
 
   init_crc32_table();
 
   // ===== STAGE 1: 136-bit bitstream =====
-  char bits[200];
+  char bits[BITS_L];
   wonder_to_bits(&wondermail_data, bits);
 
   // ===== STAGE 2: Encrypted 170-bit bitstream =====
-  char encrypted[200];
+  char encrypted[BITS_L];
   encryption_bitstream(bits, encrypted);
 
   // ===== STAGE 3: Unscrambled characters =====
-  char unscrambled[35];
+  char unscrambled[CHAR_S_US_L];
   bits_to_chars(encrypted, unscrambled);
 
   const uint8_t *swap_table;
@@ -326,13 +336,16 @@ int process_custom_mission(void) {
   } else {
     swap_table = byte_swap_us;
   }
-  char scrambled[35];
+  char scrambled[CHAR_S_US_L];
   scramble_string(unscrambled, scrambled, swap_table);
 
-  char final_code[50];
+  char final_code[FINAL_CODE_L];
   prettify(scrambled, final_code);
 
-  printf("WONDERMAIL S PASSWORD\n%s\n", final_code);
+  printf("Dungeon Name: %s\nDungeon Floor: %d\nMax Dungeon Floor: "
+         "%d\nWONDERMAIL S PASSWORD\n%s\n",
+         dungeons[dungeon_index].name, wondermail_data.floor,
+         dungeons[dungeon_index].max_floors, final_code);
 
   return 0;
 }
