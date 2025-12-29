@@ -6,6 +6,7 @@
 struct Dungeon {
   int id;
   const char *name;
+  const int max_floors;
 };
 
 struct MissionType {

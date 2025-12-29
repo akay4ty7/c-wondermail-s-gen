@@ -30,11 +30,47 @@ int clear_buffer(void);
 int confirm_dialogue(void);
 int user_input(void);
 int to_upper(char input_char);
+int process_custom_mission(void);
+int random_mission(void);
+int random_range_result(int min, int max);
 
 int main(void) {
-  srand(time(NULL));
+  printf("Wondermail-S Generator\n1.\tCustom Mission?\n2.\tRandom "
+         "Mission\n0.\tExit\n");
+  while (1) {
+    int input = user_input();
 
+    srand(time(NULL));
+    printf("> ");
+
+    if (input == 1) {
+      process_custom_mission();
+
+      break;
+    } else if (input == 2) {
+      printf("Generation number\n> ");
+      int amount = user_input();
+      for (int i = 0; i < amount; i++) {
+        printf("WONDERMAIL S PASSWORD %d\n", i + 1);
+        random_mission();
+      }
+
+      break;
+    } else if (input == 0) {
+
+      break;
+    } else {
+
+      printf("Invalid input, try agian.\n");
+    }
+  }
+
+  return 0;
+}
+
+int random_mission(void) {
   struct WonderMailData wondermail_data = {0};
+  // Defaults
   wondermail_data.mail_type = 4;
   wondermail_data.null_bits = 0;
   wondermail_data.flavor_text = 300000 + (rand() % 100000);
@@ -42,7 +78,123 @@ int main(void) {
   wondermail_data.restriction_type = 0;
   wondermail_data.target2 = 0;
 
-  printf("Wondermail-S Generator\n");
+  // Mission Type
+  int mission_index =
+      random_range_result(1, MISSION_TYPE_COUNT) - 1; // Random range here
+  wondermail_data.mission_type = mission_types[mission_index].main_type;
+  wondermail_data.mission_special = mission_types[mission_index].special_type;
+
+  // Dungeon
+
+  int dungeon_index = random_range_result(1, DUNGEON_COUNT) - 1;
+  wondermail_data.dungeon = dungeons[dungeon_index].id;
+
+  // Floor
+  if (mission_types[mission_index].special_floor) {
+    wondermail_data.floor =
+        random_range_result(1, dungeons[dungeon_index].max_floors);
+    wondermail_data.special_floor = mission_types[mission_index].special_floor;
+  } else {
+    wondermail_data.floor =
+        random_range_result(1, dungeons[dungeon_index].max_floors);
+  }
+
+  // Client
+  if (mission_types[mission_index].force_client) {
+    wondermail_data.client = mission_types[mission_index].force_client;
+  } else {
+    int base_client_id =
+        pokemon_list[random_range_result(1, POKEMON_COUNT) - 1].id;
+    int client_gender = random_range_result(0, 1);
+    wondermail_data.client = get_true_pokemon_id(base_client_id, client_gender);
+  }
+
+  // Target
+  if (mission_types[mission_index].client_is_target) {
+    wondermail_data.target = wondermail_data.client;
+  } else if (mission_types[mission_index].force_target) {
+    wondermail_data.target = mission_types[mission_index].force_target;
+  } else {
+    int base_target_id =
+        pokemon_list[random_range_result(1, POKEMON_COUNT) - 1].id;
+    int target_gender = random_range_result(0, 1);
+    wondermail_data.target = get_true_pokemon_id(base_target_id, target_gender);
+  }
+
+  // Target Item
+  if (mission_types[mission_index].use_target_item) {
+    wondermail_data.target_item =
+        items[random_range_result(1, ITEM_COUNT) - 1].id;
+  } else {
+    wondermail_data.target_item = 109; // Apple because game seems to complain
+  }
+
+  // Reward
+  if (!mission_types[mission_index].no_reward) {
+    wondermail_data.reward_type =
+        reward_types[random_range_result(1, REWARD_TYPE_COUNT) - 1].id;
+
+    if (wondermail_data.reward_type >= 1 && wondermail_data.reward_type <= 4) {
+      wondermail_data.reward = items[random_range_result(1, ITEM_COUNT) - 1].id;
+      if (wondermail_data.reward == 0) {
+        wondermail_data.reward = 109;
+      }
+    } else if (wondermail_data.reward_type == 5 ||
+               wondermail_data.reward_type == 6) {
+      wondermail_data.reward = wondermail_data.client;
+    } else {
+      wondermail_data.reward = 109;
+    }
+  } else {
+    wondermail_data.reward_type = 1;
+    wondermail_data.reward = 109;
+  }
+
+  int euro_version_check = 1;
+
+  init_crc32_table();
+
+  // ===== STAGE 1: 136-bit bitstream =====
+  char bits[200];
+  wonder_to_bits(&wondermail_data, bits);
+
+  // ===== STAGE 2: Encrypted 170-bit bitstream =====
+  char encrypted[200];
+  encryption_bitstream(bits, encrypted);
+
+  // ===== STAGE 3: Unscrambled characters =====
+  char unscrambled[35];
+  bits_to_chars(encrypted, unscrambled);
+
+  const uint8_t *swap_table;
+
+  if (euro_version_check) {
+    swap_table = byte_swap_eu;
+  } else {
+    swap_table = byte_swap_us;
+  }
+  char scrambled[35];
+  scramble_string(unscrambled, scrambled, swap_table);
+
+  char final_code[50];
+  prettify(scrambled, final_code);
+
+  printf("Dungeon Name: %s\nDungeon Floor: %d\nMax Dungeon Floor: %d\n%s\n\n",
+         dungeons[dungeon_index].name, wondermail_data.floor,
+         dungeons[dungeon_index].max_floors, final_code);
+
+  return 0;
+}
+
+int process_custom_mission(void) {
+  struct WonderMailData wondermail_data = {0};
+  // Defaults
+  wondermail_data.mail_type = 4;
+  wondermail_data.null_bits = 0;
+  wondermail_data.flavor_text = 300000 + (rand() % 100000);
+  wondermail_data.restriction = 0;
+  wondermail_data.restriction_type = 0;
+  wondermail_data.target2 = 0;
 
   // Mission Type
   printf("Mission Types:\n");
@@ -53,21 +205,29 @@ int main(void) {
   wondermail_data.mission_type = mission_types[mission_index].main_type;
   wondermail_data.mission_special = mission_types[mission_index].special_type;
 
-  printf("%s\n", mission_types[mission_index].name);
-
   // Dungeon
   printf("Dungeons:\n");
   DISPLAY_ARRAY(dungeons, DUNGEON_COUNT, name);
   printf("Select a Dungeon:\n> ");
-  wondermail_data.dungeon = dungeons[user_input() - 1].id;
+  int dungeon_index = user_input() - 1;
+  wondermail_data.dungeon = dungeons[dungeon_index].id;
 
   // Floor
-  printf("Floor:\n> ");
-  if (mission_types[mission_index].special_floor) {
-    wondermail_data.floor = user_input();
-    wondermail_data.special_floor = mission_types[mission_index].special_floor;
-  } else {
-    wondermail_data.floor = user_input();
+  while (1) {
+    printf("Floor:\n> ");
+    if (mission_types[mission_index].special_floor) {
+      wondermail_data.floor = user_input();
+      wondermail_data.special_floor =
+          mission_types[mission_index].special_floor;
+    } else {
+      wondermail_data.floor = user_input();
+    }
+
+    if ((wondermail_data.floor > dungeons[dungeon_index].max_floors)) {
+      printf("Dungeon floor is too high, try again\n");
+    } else {
+      break;
+    }
   }
 
   // Client
@@ -173,9 +333,13 @@ int main(void) {
   prettify(scrambled, final_code);
 
   printf("WONDERMAIL S PASSWORD\n%s\n", final_code);
+
   return 0;
 }
 
+int random_range_result(int min, int max) {
+  return (rand() % (max - min + 1)) + min;
+}
 int user_input(void) {
   int input;
 
