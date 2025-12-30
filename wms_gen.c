@@ -5,7 +5,7 @@
 #include "data.h"
 #include "wms_gen.h"
 
-void prettify(const char *input_34, char *output) {
+int prettify(const char *input_34, char *output) {
   sprintf(output, "%.5s %.7s %.5s\n%.5s %.7s %.5s",
           input_34,      // chars 0-4
           input_34 + 5,  // chars 5-11
@@ -14,18 +14,21 @@ void prettify(const char *input_34, char *output) {
           input_34 + 22, // chars 22-28
           input_34 + 29  // chars 29-33
   );
+  return 0;
 }
 
-void scramble_string(const char *input_34, char *output_34,
-                     const uint8_t *swap_table) {
+int scramble_string(const char *input_34, char *output_34,
+                    const uint8_t *swap_table) {
   for (int i = 0; i < 34; i++) {
     int target_pos = swap_table[i];
     output_34[target_pos] = input_34[i];
   }
   output_34[34] = '\0';
+
+  return 0;
 }
 
-void bits_to_chars(const char *bit_stream_170, char *output_34_chars) {
+int bits_to_chars(const char *bit_stream_170, char *output_34_chars) {
   int num_chars = 34;
 
   for (int i = 0; i < num_chars; i++) {
@@ -49,9 +52,11 @@ void bits_to_chars(const char *bit_stream_170, char *output_34_chars) {
     }
   }
   output_34_chars[34] = '\0';
+
+  return 0;
 }
 
-void encryption_bitstream(const char *input_136_bits, char *output_170_bits) {
+int encryption_bitstream(const char *input_136_bits, char *output_170_bits) {
   uint32_t checksum = calculate_crc32(input_136_bits, 136);
 
   // Extract 17 bytes read backwards
@@ -96,7 +101,10 @@ void encryption_bitstream(const char *input_136_bits, char *output_170_bits) {
   // Add checksum at end
   dec_to_bit(checksum, 32, temp);
   strcat(output_170_bits, temp);
+
+  return 0;
 }
+
 int get_reset_byte(uint32_t full_checksum) {
   uint8_t checksum_byte = full_checksum;
   int reset = (checksum_byte / 16) + 8 + (checksum_byte % 16);
@@ -107,7 +115,7 @@ int get_reset_byte(uint32_t full_checksum) {
   return -1;
 }
 
-void get_encryption_entries(uint8_t checksum_byte, uint8_t *entries) {
+int get_encryption_entries(uint8_t checksum_byte, uint8_t *entries) {
   int backwards = !(checksum_byte & 0x01);
   int index = checksum_byte;
 
@@ -127,6 +135,8 @@ void get_encryption_entries(uint8_t checksum_byte, uint8_t *entries) {
       }
     }
   }
+
+  return 0;
 }
 
 uint32_t calculate_crc32(const char *bit_string, int length) {
@@ -149,7 +159,7 @@ uint32_t calculate_crc32(const char *bit_string, int length) {
   return checksum;
 }
 
-void init_crc32_table(void) {
+int init_crc32_table(void) {
   for (int i = 0; i < 256; i++) {
     uint32_t entry = i;
     for (int j = 0; j < 8; j++) {
@@ -161,9 +171,11 @@ void init_crc32_table(void) {
     }
     crc32_table[i] = entry;
   }
+
+  return 0;
 }
 
-void wonder_to_bits(struct WonderMailData *wondermail_data, char *output) {
+int wonder_to_bits(struct WonderMailData *wondermail_data, char *output) {
   char temp[40];
   output[0] = '\0';
 
@@ -218,10 +230,10 @@ void wonder_to_bits(struct WonderMailData *wondermail_data, char *output) {
   memmove(output, output + 2, 136);
   output[136] = '\0';
 
-  return;
+  return 0;
 }
 
-void dec_to_bit(uint32_t num, int bits, char *output) {
+int dec_to_bit(uint32_t num, int bits, char *output) {
   for (int i = bits - 1; i >= 0; i--) {
     if ((num >> i) & 1) {
       output[bits - 1 - i] = '1';
@@ -231,7 +243,7 @@ void dec_to_bit(uint32_t num, int bits, char *output) {
   }
   output[bits] = '\0';
 
-  return;
+  return 0;
 }
 
 uint16_t get_true_pokemon_id(uint16_t base_id, int is_female) {

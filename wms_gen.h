@@ -23,16 +23,16 @@ struct WonderMailData {
 };
 
 uint16_t get_true_pokemon_id(uint16_t base_id, int is_female);
-void dec_to_bit(uint32_t num, int bits, char *output);
-void wonder_to_bits(struct WonderMailData *wondermail_data, char *output);
-void init_crc32_table(void);
+int dec_to_bit(uint32_t num, int bits, char *output);
+int wonder_to_bits(struct WonderMailData *wondermail_data, char *output);
+int init_crc32_table(void);
 uint32_t calculate_crc32(const char *bit_string, int length);
-void get_encryption_entries(uint8_t checksum_byte, uint8_t *entries);
+int get_encryption_entries(uint8_t checksum_byte, uint8_t *entries);
 int get_reset_byte(uint32_t full_checksum);
-void encryption_bitstream(const char *input_136_bits, char *output_170_bits);
-void bits_to_chars(const char *bit_stream_170, char *output_34_chars);
-void scramble_string(const char *input_34, char *output_34,
-                     const uint8_t *swap_table);
-void prettify(const char *input_34, char *output);
+int encryption_bitstream(const char *input_136_bits, char *output_170_bits);
+int bits_to_chars(const char *bit_stream_170, char *output_34_chars);
+int scramble_string(const char *input_34, char *output_34,
+                    const uint8_t *swap_table);
+int prettify(const char *input_34, char *output);
 
 #endif
