@@ -228,7 +228,7 @@ int process_custom_mission(void) {
 
   // Floor
   while (1) {
-    printf("Floor:\n> ");
+    printf("Floor (max = %d):\n> ", dungeons[dungeon_index].max_floors);
     if (mission_types[mission_index].special_floor) {
       wondermail_data.floor = user_input();
       wondermail_data.special_floor =
